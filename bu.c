@@ -162,7 +162,7 @@ void bu_readhex(bigunsigned * a_ptr, char *s) {
 
   unsigned pos = 0;
   char *s_ptr = s;
-  unsigned length = strlen(s)>>1;
+  unsigned length = strlen(s) >> 3;
 
   while (*s_ptr && pos < BU_MAX_HEX) {
     a_ptr->digit[length - pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
