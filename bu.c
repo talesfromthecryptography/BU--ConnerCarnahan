@@ -154,19 +154,20 @@ void bu_readhex(bigunsigned * a_ptr, char *s) {
   bu_clear(a_ptr);
 
   //To clear whitespace
+  char* d = s;
   do {
-	  while (isspace(*s) {
-		  s++;
+	  while (isspace(*d)) {
+		  ++d;
 	  }
-  } while (*s++)
+  } while (*s++ == *d++);
 
   unsigned pos = 0;
-  char *s_ptr = s;
+  char *s_ptr = d;
 
   while (*s_ptr && pos < BU_MAX_HEX) {
     //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
 	a_ptr->digit[pos >> 3] |= (uint32_t)hex2bin(*s_ptr));
-	bu_shl_ip(a_ptr, 16);
+	bu_shl_ip(a_ptr, 8);
     pos++;
     s_ptr++;
   }
