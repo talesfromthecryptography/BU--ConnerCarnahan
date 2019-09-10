@@ -41,14 +41,15 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
 
   //This loops from largest to smallest copying over the bits that need to shift
   //I ensure that the modulus remains positive (else C gets weird with negative modulus) by adding BU_DIGITS at the front
-  for (int i = 0; i < a_ptr->used; i += 1) {
-
-	  //First I grab the bits that need to move from one digit to the next and then or them to the larger digit
-	  a_ptr->digit[(BU_DIGITS + a_ptr->used - i + 1 + a_ptr->base) % BU_DIGITS] |= 
-		  ((mask & a_ptr->digit[(BU_DIGITS + a_ptr->used - i + a_ptr->base) % BU_DIGITS]) >> (BU_BITS_PER_DIGIT - bits));
-
-	  //Then I shift the bits in the digit
-	  a_ptr->digit[(BU_DIGITS + a_ptr->used - i + a_ptr->base) % BU_DIGITS] <<= bits;
+  for (int i = 0; i <= a_ptr->used; i += 1) {
+    uint8_t index = (a_ptr->used + a_ptr->base - i) % BU_DIGITS;
+	  
+    //First I grab the bits that need to move from one digit to the next and then or them to the larger digit
+	  a_ptr->digit[(index+1) % BU_DIGITS] |= (mask & a_ptr->digit[index]) >> (BU_BITS_PER_DIGIT - bits);
+    a_ptr->digit[index] |= !!(mask & a_ptr->digit[index]);
+	  
+    //Then I shift the bits in the digit
+	  a_ptr->digit[index] <<= bits;
 
   }
 
@@ -57,15 +58,15 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
   a_ptr->used += wrds;
 
   //Then I make sure that used is updated
-  if (a_ptr->digit[(BU_DIGITS +a_ptr->base + a_ptr->used + 1) % BU_DIGITS] != 0) {
+  if (a_ptr->digit[(BU_DIGITS +a_ptr->base + a_ptr->used+1) % BU_DIGITS] != 0) {
 	  a_ptr->used += 1;
   }
 
   //Now I have to make a decision about overflow, I am opting to have it set so that it loops back to 0, cause that makes the most sense to me
-  uint8_t loopnum = a_ptr->used <= BU_DIGITS-1 ? a_ptr->used : BU_DIGITS-1;
+  uint8_t loopnum = a_ptr->used <= BU_DIGITS ? a_ptr->used : BU_DIGITS;
   uint8_t setbacknum = 0;
 
-  for (int i = 0; i <= loopnum; i += 1) {
+  for (int i = 0; i < loopnum; i += 1) {
 	  if (a_ptr->digit[(BU_DIGITS + a_ptr->used + a_ptr->base - i) % BU_DIGITS] == 0) {
 		  setbacknum += 1;
 	  }
@@ -74,6 +75,7 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
 	  }
   }
   a_ptr->used -= setbacknum;
+  
 }
 
 // Produce a = b + c
@@ -154,20 +156,25 @@ void bu_readhex(bigunsigned * a_ptr, char *s) {
   bu_clear(a_ptr);
 
   //To clear whitespace
+  /*
   char* d = s;
-  do {
-	  while (isspace(*d)) {
-		  ++d;
-	  }
-  } while (*s++ == *d++);
-
+    while (*s != '\0')
+  {
+    if(!isspace(*s))
+    {
+      *d = *s;
+      s++;
+    }
+    s++;
+  }
+  */
   unsigned pos = 0;
-  char *s_ptr = d;
+  char *s_ptr = s;
 
   while (*s_ptr && pos < BU_MAX_HEX) {
     //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
 	  a_ptr->digit[pos >> 3] |= (uint32_t)hex2bin(*s_ptr);
-	  bu_shl_ip(a_ptr, 16);
+	  bu_shl_ip(a_ptr, 4);
     pos++;
     s_ptr++;
   }
