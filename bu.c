@@ -167,7 +167,7 @@ void bu_readhex(bigunsigned * a_ptr, char *s) {
   while (*s_ptr && pos < BU_MAX_HEX) {
     //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
 	  a_ptr->digit[pos >> 3] |= (uint32_t)hex2bin(*s_ptr);
-	  bu_shl_ip(a_ptr, 8);
+	  bu_shl_ip(a_ptr, 16);
     pos++;
     s_ptr++;
   }
