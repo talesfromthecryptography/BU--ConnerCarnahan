@@ -41,14 +41,14 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
 
   //This loops from largest to smallest copying over the bits that need to shift
   //I ensure that the modulus remains positive (else C gets weird with negative modulus) by adding BU_DIGITS at the front
-  for (int i = 0; i < used; i += 1) {
+  for (int i = 0; i < a_ptr->used; i += 1) {
 
 	  //First I grab the bits that need to move from one digit to the next and then or them to the larger digit
-	  a_ptr->digit[(BU_DIGITS + used - i + 1 + a_ptr->base) % BU_DIGITS] |= 
-		  ((mask & a_ptr->digit[(BU_DIGITS + used - i + a_ptr->base) % BU_DIGITS]) >> (BU_BITS_PER_DIGIT - bits));
+	  a_ptr->digit[(BU_DIGITS + a_ptr->used - i + 1 + a_ptr->base) % BU_DIGITS] |= 
+		  ((mask & a_ptr->digit[(BU_DIGITS + a_ptr->used - i + a_ptr->base) % BU_DIGITS]) >> (BU_BITS_PER_DIGIT - bits));
 
 	  //Then I shift the bits in the digit
-	  a_ptr->digit[(BU_DIGITS + used - i + a_ptr->base) % BU_DIGITS] <<= bits;
+	  a_ptr->digit[(BU_DIGITS + a_ptr->used - i + a_ptr->base) % BU_DIGITS] <<= bits;
 
   }
 
@@ -57,8 +57,8 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
   a_ptr->used += wrds;
 
   //Then I make sure that used is updated
-  if (a_ptr->digit[(BU_DIGITS +base + used + 1) % BU_DIGITS] != 0) {
-	  used += 1;
+  if (a_ptr->digit[(BU_DIGITS +a_ptr->base + a_ptr->used + 1) % BU_DIGITS] != 0) {
+	  a_ptr->used += 1;
   }
 
   //Now I have to make a decision about overflow, I am opting to have it set so that it loops back to 0, cause that makes the most sense to me
@@ -166,8 +166,8 @@ void bu_readhex(bigunsigned * a_ptr, char *s) {
 
   while (*s_ptr && pos < BU_MAX_HEX) {
     //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
-	a_ptr->digit[pos >> 3] |= (uint32_t)hex2bin(*s_ptr));
-	bu_shl_ip(a_ptr, 8);
+	  a_ptr->digit[pos >> 3] |= (uint32_t)hex2bin(*s_ptr);
+	  bu_shl_ip(a_ptr, 8);
     pos++;
     s_ptr++;
   }
