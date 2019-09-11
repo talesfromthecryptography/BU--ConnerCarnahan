@@ -29,7 +29,7 @@ void bu_clear(bigunsigned *a_ptr) {
   a_ptr->base = 0;
 }
 
-
+//a = b<<cnt
 void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
   uint16_t wrds = cnt >> 5; // # of whole words to shift
   uint16_t bits = cnt &0x1f;// number of bits in a word to shift
@@ -38,30 +38,46 @@ void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
 
   // You implement. Avoid memory copying as much as possible
 
-  //First I am gonna check for garbage in A that I don't want
+  //First I am gonna check for garbage in A that I don't want (I have to use int else it will run forever)
   a_ptr->base = b_ptr->base;
-  for (int i = b_ptr->used; i <= BU_DIGITS; i+= 1){
+  for (int i = b_ptr->used; i < BU_DIGITS; i += 1){
     a_ptr->digit[(a_ptr->base+i)%BU_DIGITS] = 0;
   }
 
-  //This is for having big overflows
-  for (int i = BU_DIGITS; i < b_ptr->used + wrds; i += 1){
-    
+  //I am doing a for loop because it will take care of both moving the base for the words and handle possible overflow
+  for (uint8_t i = 0; i < wrds; i += 1){
+    a_ptr->digit[a_ptr->base -1] = 0; //Sets the most siginificant digit to 0
+    a_ptr->base = a_ptr->base - 1; //Sets the base back one, to the previously most significant digit
   }
+
+  a_ptr->used = BU_DIGITS <= (b_ptr->used + wrds) ? 
+                BU_DIGITS : b_ptr->used + wrds; //Makes sure that used is bound by digits available
+
 
   //Now for the within digit shifts
-  uint32_t carry = 0;
-  uint8_t index = 0;
-  for (int i = 0; i <= b_ptr->used; i+=1){
-    index = (b_ptr->base + b_ptr->used - i) % BU_DIGITS;
-    
+  uint32_t carry = 0; //The bits that need to be carried (I have it separated for my own readability)
+  uint8_t astart = (a_ptr->base + a_ptr->used) % BU_DIGITS; //Where the loop starts for a
+  uint8_t offset = b_ptr->used + wrds <= BU_DIGITS ? b_ptr->used : b_ptr->used - (b_ptr->used + wrds) % BU_DIGITS;
+  uint8_t bstart = (b_ptr->base + offset) % BU_DIGITS; //I split it into offset and start because I thought it looked more readable and
+                                                       //I am sure those 8 bits of memory can't be that important
+  
+  for (int i = 0; i <= offset; i += 1) {
+    //printf("NUM: %x\t", b_ptr->used); //Bug testing
+    //printf("OFFSET: %x\n", offset);
+    carry = (b_ptr->digit[(BU_DIGITS + bstart- i - 1) % BU_DIGITS] & mask) >> (BU_BITS_PER_DIGIT - bits);
+    a_ptr->digit[(BU_DIGITS + astart - i ) % BU_DIGITS] = (b_ptr->digit[(BU_DIGITS + bstart - i ) % BU_DIGITS] << bits) | carry;
   }
 
+  //Last check to see if during the shift some bits went into a new digit:
+  if (a_ptr->digit[(a_ptr->used+a_ptr->base)%BU_DIGITS] != 0 && a_ptr->used < BU_DIGITS){
+    a_ptr->used += 1;
+  }
 }
 
 // Shift in place a bigunsigned by cnt bits to the left
 // Example: beef shifted by 4 results in beef0
 void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
+  /*
   uint16_t wrds = cnt >> 5; // # of whole words to shift
   uint16_t bits = cnt &0x1f;// number of bits in a word to shift
 
@@ -70,7 +86,8 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
   // You implement. Avoid memory copying as much as possible.
   uint32_t carryOff = 0;
   uint32_t carryOn = 0; 
-
+  */
+  bu_shl(a_ptr,a_ptr,cnt);
 }
 
 //a = (b>>cnt)
@@ -94,9 +111,9 @@ void bu_shr(bigunsigned* a_ptr,  bigunsigned* b_ptr, uint16_t cnt){
   //Then to take care of the shifts by digits ( I do all this on A so that I can also just pass b as a and we will get 
   //the shift in place and so that if A had stuff in it before it will be correct and then okay cool)
   a_ptr->base = b_ptr->base;
-  for (int i = 0; i < wrds; i += 1) {
+  for (uint8_t i = 0; i < wrds; i += 1) {
     a_ptr->digit[a_ptr->base] = 0;
-    a_ptr->base = (a_ptr->base + 1) % BU_DIGITS;
+    a_ptr->base = a_ptr->base + 1;
     a_ptr->used -= 1;
   }
 
@@ -227,6 +244,6 @@ void bu_dbg_printf(bigunsigned *a_ptr) {
   uint16_t i = a_ptr->used;
   printf("Digits: ");
   while (i-- > 0)
-    printf("%8x ", a_ptr->digit[a_ptr->base+i]);
+    printf("%8x ", a_ptr->digit[(a_ptr->base+i) %BU_DIGITS]);
   printf("Length: %x\n", bu_len(a_ptr));
 }

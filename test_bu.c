@@ -17,12 +17,14 @@ int main() {
   bu_dbg_printf(&c);
   
   //For testing shifts
-  bu_shr_ip(&a,16);
+  //bu_shr_ip(&a,16);
+  //bu_dbg_printf(&a);
+
+  //bu_shl(&b,&c,32);
+  //bu_dbg_printf(&b);
+
+  bu_shl_ip(&a,32);
   bu_dbg_printf(&a);
-
-  //bu_shl_ip(&a,16);
-  //bu_dbg_prinf(&a);
-
 
   return 0;
 }
