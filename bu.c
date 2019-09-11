@@ -29,6 +29,36 @@ void bu_clear(bigunsigned *a_ptr) {
   a_ptr->base = 0;
 }
 
+
+void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
+  uint16_t wrds = cnt >> 5; // # of whole words to shift
+  uint16_t bits = cnt &0x1f;// number of bits in a word to shift
+
+  uint32_t mask = 0xffffffff << (BU_BITS_PER_DIGIT - bits);
+
+  // You implement. Avoid memory copying as much as possible
+
+  //First I am gonna check for garbage in A that I don't want
+  a_ptr->base = b_ptr->base;
+  for (int i = b_ptr->used; i <= BU_DIGITS; i+= 1){
+    a_ptr->digit[(a_ptr->base+i)%BU_DIGITS] = 0;
+  }
+
+  //This is for having big overflows
+  for (int i = BU_DIGITS; i < b_ptr->used + wrds; i += 1){
+    
+  }
+
+  //Now for the within digit shifts
+  uint32_t carry = 0;
+  uint8_t index = 0;
+  for (int i = 0; i <= b_ptr->used; i+=1){
+    index = (b_ptr->base + b_ptr->used - i) % BU_DIGITS;
+    
+  }
+
+}
+
 // Shift in place a bigunsigned by cnt bits to the left
 // Example: beef shifted by 4 results in beef0
 void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
@@ -38,45 +68,65 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
   uint32_t mask = 0xffffffff << bits;
 
   // You implement. Avoid memory copying as much as possible.
+  uint32_t carryOff = 0;
+  uint32_t carryOn = 0; 
 
-  //This loops from largest to smallest copying over the bits that need to shift
-  //I ensure that the modulus remains positive (else C gets weird with negative modulus) by adding BU_DIGITS at the front
-  for (int i = 0; i <= a_ptr->used; i += 1) {
-    uint8_t index = (a_ptr->used + a_ptr->base - i) % BU_DIGITS;
-	  
-    //First I grab the bits that need to move from one digit to the next and then or them to the larger digit
-	  a_ptr->digit[(index+1) % BU_DIGITS] |= (mask & a_ptr->digit[index]) >> (BU_BITS_PER_DIGIT - bits);
-    a_ptr->digit[index] |= !!(mask & a_ptr->digit[index]);
-	  
-    //Then I shift the bits in the digit
-	  a_ptr->digit[index] <<= bits;
-
-  }
-
-  //Then I shift the base back the number of wrds I want and update the used number
-  a_ptr->base = (BU_DIGITS + a_ptr->base-wrds)% BU_DIGITS;
-  a_ptr->used += wrds;
-
-  //Then I make sure that used is updated
-  if (a_ptr->digit[(BU_DIGITS +a_ptr->base + a_ptr->used+1) % BU_DIGITS] != 0) {
-	  a_ptr->used += 1;
-  }
-
-  //Now I have to make a decision about overflow, I am opting to have it set so that it loops back to 0, cause that makes the most sense to me
-  uint8_t loopnum = a_ptr->used <= BU_DIGITS ? a_ptr->used : BU_DIGITS;
-  uint8_t setbacknum = 0;
-
-  for (int i = 0; i < loopnum; i += 1) {
-	  if (a_ptr->digit[(BU_DIGITS + a_ptr->used + a_ptr->base - i) % BU_DIGITS] == 0) {
-		  setbacknum += 1;
-	  }
-	  else {
-		  break;
-	  }
-  }
-  a_ptr->used -= setbacknum;
-  
 }
+
+//a = (b>>cnt)
+void bu_shr(bigunsigned* a_ptr,  bigunsigned* b_ptr, uint16_t cnt){
+  uint16_t wrds = cnt >> 5; // # of whole words to shift
+  uint16_t bits = cnt &0x1f;// number of bits in a word to shift
+
+  uint32_t mask = 0xffffffff >> (BU_BITS_PER_DIGIT - bits);
+
+  //First to check if we are larger than the total amount of used for b so that we can just clear the thing instead
+  if (wrds >= b_ptr->used) {
+    bu_clear(a_ptr);
+    return;
+  }
+  
+  //Then I need to make sure a_ptr doesn't have random garbage in it:
+  for (int i = b_ptr->used; i < BU_DIGITS; i+= 1) {
+    a_ptr->digit[(b_ptr->base+i)%BU_DIGITS] = 0;
+  }
+
+  //Then to take care of the shifts by digits ( I do all this on A so that I can also just pass b as a and we will get 
+  //the shift in place and so that if A had stuff in it before it will be correct and then okay cool)
+  a_ptr->base = b_ptr->base;
+  for (int i = 0; i < wrds; i += 1) {
+    a_ptr->digit[a_ptr->base] = 0;
+    a_ptr->base = (a_ptr->base + 1) % BU_DIGITS;
+    a_ptr->used -= 1;
+  }
+
+  //Now for the shifts within the digits
+  uint32_t carry = 0;
+  uint8_t index = 0;
+  for (int i = 0; i < a_ptr->used; i += 1) {
+    index = (a_ptr->base+i)%BU_DIGITS;
+    carry = ((mask & b_ptr->digit[(index+1)%BU_DIGITS]) << (BU_BITS_PER_DIGIT-bits));
+    a_ptr->digit[index] = (b_ptr->digit[index] >> bits) | carry;
+  }
+
+  //last I am gonna have it check to see if a bit was shifted over in the last step (like if it was over a boundary)
+  if (a_ptr->used > 0) {
+    if (a_ptr->digit[(a_ptr->used+a_ptr->base-1)%BU_DIGITS] == 0){
+      a_ptr->used -= 1;
+    }
+  }
+
+
+}
+
+//  a >>= cnt
+// Shift in place a big unsigned by cnt bits to the left
+// Example: beef shifted by 4 results in beef0
+void bu_shr_ip(bigunsigned* a_ptr, uint16_t cnt){
+  bu_shr(a_ptr, a_ptr, cnt);
+}
+
+
 
 // Produce a = b + c
 void bu_add(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr) {
@@ -155,27 +205,16 @@ uint16_t bu_len(bigunsigned *a_ptr) {
 void bu_readhex(bigunsigned * a_ptr, char *s) {
   bu_clear(a_ptr);
 
-  //To clear whitespace
-  /*
-  char* d = s;
-    while (*s != '\0')
-  {
-    if(!isspace(*s))
-    {
-      *d = *s;
-      s++;
-    }
-    s++;
-  }
-  */
-  unsigned pos = 0;
   char *s_ptr = s;
+  unsigned pos = 0;
 
   while (*s_ptr && pos < BU_MAX_HEX) {
-    //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
-	  a_ptr->digit[pos >> 3] |= (uint32_t)hex2bin(*s_ptr);
-	  bu_shl_ip(a_ptr, 4);
-    pos++;
+    if (!isspace(*s_ptr)) {
+      a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
+	    //a_ptr->digit[0] |= (uint32_t)hex2bin(*s_ptr);
+	    //bu_shl_ip(a_ptr, 4);
+      pos++;
+    }
     s_ptr++;
   }
   a_ptr->used = (pos>>3) + ((pos&0x7)!=0);

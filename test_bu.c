@@ -3,7 +3,6 @@
 
 #include "bu.h"
 
-
 int main() {
   bigunsigned a,b,c;
   char s[BU_MAX_HEX+1];
@@ -16,5 +15,14 @@ int main() {
   bu_add(&c, &a, &b);
  
   bu_dbg_printf(&c);
+  
+  //For testing shifts
+  bu_shr_ip(&a,16);
+  bu_dbg_printf(&a);
+
+  //bu_shl_ip(&a,16);
+  //bu_dbg_prinf(&a);
+
+
   return 0;
 }

@@ -24,14 +24,14 @@ void bu_cpy(bigunsigned *dest, bigunsigned *src);
 void bu_clear(bigunsigned *a_ptr);
 
 //  a = b<<cnt
-void bu_shl(bigunsigned* a_ptr, uint16_t cnt);
+void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt);
 //  a <<= cnt
 // Shift in place a big unsigned by cnt bits to the left
 // Example: beef shifted by 4 results in beef0
 void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt);
 
 //  a = b>>cnt
-void bu_shr(bigunsigned* a_ptr, uint16_t cnt);
+void bu_shr(bigunsigned* a_ptr,  bigunsigned* b_ptr, uint16_t cnt);
 //  a >>= cnt
 // Shift in place a big unsigned by cnt bits to the left
 // Example: beef shifted by 4 results in beef0
