@@ -54,8 +54,8 @@ void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
   }
   a_ptr->base = a_ptr->base - wrds;
 
-  a_ptr->used = BU_DIGITS <= (b_ptr->used + wrds) ? 
-                BU_DIGITS : b_ptr->used + wrds+1; //Makes sure that used is bound by digits available
+  a_ptr->used = BU_DIGITS <= (b_ptr->used + wrds) 
+                ? BU_DIGITS : (b_ptr->used + wrds); //Makes sure that used is bound by digits available
 
   //Now for the within digit shifts
   uint32_t carry = 0;                          //The bits that need to be carried (I have it separated for my own readability)
@@ -70,7 +70,7 @@ void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
   }
 
   //Last check to see if during the shift some bits went into a new digit:
-  if (a_ptr->digit[(uint8_t)a_ptr->used+a_ptr->base] != 0 && a_ptr->used < BU_DIGITS){
+  if (a_ptr->digit[(uint8_t)(a_ptr->used + a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
   }
   
@@ -211,48 +211,24 @@ uint16_t bu_len(bigunsigned *a_ptr) {
 //        that will be ignored. For example, "DEAD BEEF" should
 //        be legal input resulting in the value 0xDEADBEEF.
 
-void bu_readhex(bigunsigned * a_ptr, char *s) {
+void bu_readhex(bigunsigned *a_ptr, char *s) {
   bu_clear(a_ptr);
 
   //Reverse method:
   char *s_ptr = s;
   int count = 0;
-  while (*s_ptr++) count+= 1;
+  while (*s_ptr++){ count+= 1; }
   count -= 1;
   unsigned pos = 0;
-
-  //I realize this isn't the best answer possible (I should just read the string backwards) but I thought it was fun that I got to
-  //use the shift left function
   
   while (count >= 0 && pos < BU_MAX_HEX) {
     if (!isspace(*s_ptr)) {
       a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(s[count])) << ((pos & 0x7)<<2));
-	    //bu_shl_ip(a_ptr, 4);
-	    //a_ptr->digit[a_ptr->base] |= (uint32_t)hex2bin(*s_ptr);
       pos++;
     }
     count -= 1;
   }
   a_ptr->used = (pos>>3) + ((pos&0x7)!=0); 
-
-  
-  /* //BONUS OTHER METHOD That I can't bring myself to delete just yet
-  char *s_ptr = s;
-  unsigned pos = 0;
-  
-  //I realize this isn't the best answer possible (I should just read the string backwards) but I thought it was fun that I got to
-  //use the shift left function
-  while (*s_ptr && pos < BU_MAX_HEX) {
-    if (!isspace(*s_ptr)) {
-      //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
-	    bu_shl_ip(a_ptr, 4);
-	    a_ptr->digit[a_ptr->base] |= (uint32_t)hex2bin(*s_ptr);
-      pos++;
-      a_ptr->used = (pos>>3) + ((pos&0x7)!=0); 
-    }
-    s_ptr++;
-  }
-  */
 }
 
 // 

@@ -10,9 +10,6 @@ int main() {
   bu_readhex(&a,"CAB51AFF BEEF");
   bu_readhex(&b,"111111111111");
 
-  printf("\n \n A \n");
-  bu_dbg_printf(&a);
-
   bu_add(&c, &a, &b);
  
   bu_dbg_printf(&c);
@@ -31,31 +28,27 @@ int main() {
 
   //bu_shl(&b,&c,32);
   //bu_dbg_printf(&b);
-  
-  /*
+
   bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a left by 16\n \n");
+  printf("\n \n Shift a left by 16\n");
   bu_shl_ip(&a,16);
   bu_dbg_printf(&a);
-  
 
   bu_readhex(&a,"CAB51AFF BEEF");
   printf("\n \n Shift a left by 32\n");
   bu_shl_ip(&a,32);
   bu_dbg_printf(&a);
-  */
   
   bu_readhex(&a,"CAB51AFF BEEF");
   printf("\n \n Shift a left by 56\n");
-  bu_shl_ip(&a,60);
+  bu_shl_ip(&a,56);
   bu_dbg_printf(&a);
 
-  /*
   bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a left by 128\n");
-  bu_shl_ip(&a,128);
-  bu_dbg_printf(&a);
-  */
- 
+  printf("\n \n Shift a left by 64\n");
+  bu_shl_ip(&a,64);
+  bu_dbg_printf(&a); 
+
+
   return 0;
 }
