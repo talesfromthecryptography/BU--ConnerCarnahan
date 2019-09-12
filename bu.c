@@ -35,58 +35,50 @@ void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
   uint16_t bits = cnt &0x1f;// number of bits in a word to shift
 
   uint32_t mask = 0xffffffff << (BU_BITS_PER_DIGIT - bits);
+  if (bits == 0){
+    mask = 0; // This was because I was getting a real weird bug where if bits was 0 then mask would not change
+  }
 
   // You implement. Avoid memory copying as much as possible
-
+  
   //First I am gonna check for garbage in A that I don't want (I have to use int else it will run forever)
   a_ptr->base = b_ptr->base;
-  for (int i = b_ptr->used; i < BU_DIGITS; i += 1){
+  a_ptr->used = b_ptr->used;
+  for (uint16_t i = b_ptr->used; i < BU_DIGITS; i += 1){
     a_ptr->digit[(a_ptr->base+i)%BU_DIGITS] = 0;
   }
 
   //I am doing a for loop because it will take care of both moving the base for the words and handle possible overflow
-  for (uint8_t i = 0; i < wrds; i += 1){
-    a_ptr->digit[a_ptr->base -1] = 0; //Sets the most siginificant digit to 0
-    a_ptr->base = a_ptr->base - 1; //Sets the base back one, to the previously most significant digit
+  for (uint16_t i = 0; i < wrds; i += 1){
+    a_ptr->digit[a_ptr->base - 1] = 0; //Sets the most siginificant digit to 0
   }
+  a_ptr->base = a_ptr->base - wrds;
 
   a_ptr->used = BU_DIGITS <= (b_ptr->used + wrds) ? 
-                BU_DIGITS : b_ptr->used + wrds; //Makes sure that used is bound by digits available
-
+                BU_DIGITS : b_ptr->used + wrds+1; //Makes sure that used is bound by digits available
 
   //Now for the within digit shifts
-  uint32_t carry = 0; //The bits that need to be carried (I have it separated for my own readability)
-  uint8_t astart = (a_ptr->base + a_ptr->used) % BU_DIGITS; //Where the loop starts for a
-  uint8_t offset = b_ptr->used + wrds <= BU_DIGITS ? b_ptr->used : b_ptr->used - (b_ptr->used + wrds) % BU_DIGITS;
-  uint8_t bstart = (b_ptr->base + offset) % BU_DIGITS; //I split it into offset and start because I thought it looked more readable and
-                                                       //I am sure those 8 bits of memory can't be that important
-  
-  for (int i = 0; i <= offset; i += 1) {
-    //printf("NUM: %x\t", b_ptr->used); //Bug testing
-    //printf("OFFSET: %x\n", offset);
-    carry = (b_ptr->digit[(BU_DIGITS + bstart- i - 1) % BU_DIGITS] & mask) >> (BU_BITS_PER_DIGIT - bits);
-    a_ptr->digit[(BU_DIGITS + astart - i ) % BU_DIGITS] = (b_ptr->digit[(BU_DIGITS + bstart - i ) % BU_DIGITS] << bits) | carry;
+  uint32_t carry = 0;                          //The bits that need to be carried (I have it separated for my own readability)
+  uint8_t astart = a_ptr->base + a_ptr->used ;                                     //Where the loop starts for a
+  uint8_t offset = b_ptr->used + wrds <= BU_DIGITS ?                              //Offset is the difference in written on used digits
+                   b_ptr->used : b_ptr->used - (b_ptr->used + wrds) % BU_DIGITS;  //between b and a, it will give us which digit we start
+  uint8_t bstart = b_ptr->base + offset;                                          //The shift loop on
+
+  for (uint8_t i = 0; i <= offset; i += 1) {
+    carry = (b_ptr->digit[bstart - i - 1] & mask) >> (BU_BITS_PER_DIGIT - bits);
+    a_ptr->digit[astart - i] = (b_ptr->digit[bstart - i] << bits) | carry;
   }
 
   //Last check to see if during the shift some bits went into a new digit:
-  if (a_ptr->digit[(a_ptr->used+a_ptr->base)%BU_DIGITS] != 0 && a_ptr->used < BU_DIGITS){
+  if (a_ptr->digit[(uint8_t)a_ptr->used+a_ptr->base] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
   }
+  
 }
 
 // Shift in place a bigunsigned by cnt bits to the left
 // Example: beef shifted by 4 results in beef0
 void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
-  /*
-  uint16_t wrds = cnt >> 5; // # of whole words to shift
-  uint16_t bits = cnt &0x1f;// number of bits in a word to shift
-
-  uint32_t mask = 0xffffffff << bits;
-
-  // You implement. Avoid memory copying as much as possible.
-  uint32_t carryOff = 0;
-  uint32_t carryOn = 0; 
-  */
   bu_shl(a_ptr,a_ptr,cnt);
 }
 
@@ -222,19 +214,45 @@ uint16_t bu_len(bigunsigned *a_ptr) {
 void bu_readhex(bigunsigned * a_ptr, char *s) {
   bu_clear(a_ptr);
 
+  //Reverse method:
   char *s_ptr = s;
+  int count = 0;
+  while (*s_ptr++) count+= 1;
+  count -= 1;
   unsigned pos = 0;
 
+  //I realize this isn't the best answer possible (I should just read the string backwards) but I thought it was fun that I got to
+  //use the shift left function
+  
+  while (count >= 0 && pos < BU_MAX_HEX) {
+    if (!isspace(*s_ptr)) {
+      a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(s[count])) << ((pos & 0x7)<<2));
+	    //bu_shl_ip(a_ptr, 4);
+	    //a_ptr->digit[a_ptr->base] |= (uint32_t)hex2bin(*s_ptr);
+      pos++;
+    }
+    count -= 1;
+  }
+  a_ptr->used = (pos>>3) + ((pos&0x7)!=0); 
+
+  
+  /* //BONUS OTHER METHOD That I can't bring myself to delete just yet
+  char *s_ptr = s;
+  unsigned pos = 0;
+  
+  //I realize this isn't the best answer possible (I should just read the string backwards) but I thought it was fun that I got to
+  //use the shift left function
   while (*s_ptr && pos < BU_MAX_HEX) {
     if (!isspace(*s_ptr)) {
-      a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
-	    //a_ptr->digit[0] |= (uint32_t)hex2bin(*s_ptr);
-	    //bu_shl_ip(a_ptr, 4);
+      //a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(*s_ptr)) << ((pos & 0x7)<<2));
+	    bu_shl_ip(a_ptr, 4);
+	    a_ptr->digit[a_ptr->base] |= (uint32_t)hex2bin(*s_ptr);
       pos++;
+      a_ptr->used = (pos>>3) + ((pos&0x7)!=0); 
     }
     s_ptr++;
   }
-  a_ptr->used = (pos>>3) + ((pos&0x7)!=0);
+  */
 }
 
 // 
@@ -244,6 +262,6 @@ void bu_dbg_printf(bigunsigned *a_ptr) {
   uint16_t i = a_ptr->used;
   printf("Digits: ");
   while (i-- > 0)
-    printf("%8x ", a_ptr->digit[(a_ptr->base+i) %BU_DIGITS]);
+    printf("%8x ", a_ptr->digit[(a_ptr->base+i) % BU_DIGITS]);
   printf("Length: %x\n", bu_len(a_ptr));
 }
