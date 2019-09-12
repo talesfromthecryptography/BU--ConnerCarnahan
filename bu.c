@@ -1,5 +1,6 @@
 #include <string.h> // for memset, etc.
 #include <stdio.h>  // for printf
+#include <string.h>
 
 #include "bu.h"
 
@@ -216,13 +217,11 @@ void bu_readhex(bigunsigned *a_ptr, char *s) {
 
   //Reverse method:
   char *s_ptr = s;
-  int count = 0;
-  while (*s_ptr++){ count+= 1; }
-  count -= 1;
+  int count = strlen(s_ptr);
   unsigned pos = 0;
   
   while (count >= 0 && pos < BU_MAX_HEX) {
-    if (!isspace(*s_ptr)) {
+    if (!isspace(s[count])) {
       a_ptr->digit[pos>>3] |= (((uint32_t)hex2bin(s[count])) << ((pos & 0x7)<<2));
       pos++;
     }
