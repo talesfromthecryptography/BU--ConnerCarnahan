@@ -136,8 +136,6 @@ void bu_shr_ip(bigunsigned* a_ptr, uint16_t cnt){
   bu_shr(a_ptr, a_ptr, cnt);
 }
 
-
-
 // Produce a = b + c
 void bu_add(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr) {
   uint8_t carry = 0;
@@ -191,6 +189,22 @@ void bu_add(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr) {
   a_ptr->used = cnt;
 }
 
+//a += b
+//This is probably not as fast as the regular add but the code is nicer so if this works I'll be happy
+//UPDATE: It works and I am pretty pleased it only loops once
+//Should not be used if the result > 8k Bits
+void bu_add_ip(bigunsigned *a_ptr, bigunsigned *b_ptr){
+  uint64_t carry = 0;
+  uint16_t bound = a_ptr->used >= b_ptr->used ? a_ptr->used : b_ptr->used; 
+
+  for (uint16_t i = 0; i < bound; i+=1){
+    carry = (uint64_t)(b_ptr->digit[(uint8_t)(i+b_ptr->base)]) + (uint64_t)(a_ptr->digit[(uint8_t)(i+a_ptr->base)]) + (carry >> 32);
+    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)carry;
+  }
+  a_ptr->used = bound;
+
+}
+
 // return the length in bits (should always be less or equal to 32*a->used)
 uint16_t bu_len(bigunsigned *a_ptr) {
   uint16_t res = a_ptr->used<<5;
@@ -202,6 +216,62 @@ uint16_t bu_len(bigunsigned *a_ptr) {
     res--;
   }
   return res;
+}
+
+//a = b*d
+//This should not be used if the result would be greater that 8k bits or it will give a weird answer
+void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
+  bigunsigned carry; //carry will make sure I only have to add on the last step
+  bu_clear(&carry); //just to make sure there isn't any junk in this variable
+
+  uint64_t mult = 0; //This is a temporary variable that holds 
+  for (uint16_t i = 0; i < b_ptr->used; i += 1){
+    mult = (uint64_t)b_ptr->digit[(uint8_t)(b_ptr->base+i)]*(uint64_t)d;  //calculate the full multiplication of the two digits
+    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)mult;              //put the low digit in the array in the spot it needs to be
+    carry.digit[(uint8_t)(i+1)] = (uint32_t)(mult >> 32);                 //Hold the larger digit for later
+  }
+
+  bu_add_ip(a_ptr,&carry); //finally add the carry to the non-carried data
+}
+
+// a *= d
+void bu_mul_digit_ip(bigunsigned *a_ptr, uint32_t d){
+  bu_mul_digit(a_ptr,a_ptr,d);
+}
+
+// a = b*c
+//There is unstable behavior for results greater than 8k bits
+void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){
+  bigunsigned carries[b_ptr->used]; //Temp variable that keeps all of the digitwise multiplications
+
+  for(uint16_t i = 0; i < b_ptr->used; i+=1){
+    bu_mul_digit(&carries[i],c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
+  }
+  
+  for(uint16_t i = 1; i < b_ptr->used; i+=1){
+    bu_shl_ip(&carries[i], 32*i); //Make sure that things are all shifted to match their digit number
+  }
+
+  bu_clear(a_ptr); //make sure a is 0
+  for(uint16_t i = 0; i < b_ptr->used; i+=1){
+    bu_add_ip(a_ptr,&carries[i]); //add all of the carries into one bigunsigned
+  }
+
+}
+
+// a *= b
+void bu_mul_ip(bigunsigned *a_ptr, bigunsigned *b_ptr){
+  bu_mul(a_ptr,a_ptr,b_ptr);
+}
+
+// a = b^2
+void bu_sqr(bigunsigned *a_ptr, bigunsigned *b_ptr){
+  bu_mul(a_ptr,b_ptr,b_ptr);
+}
+
+// a *= a
+void bu_sqr_ip(bigunsigned *a_ptr) {
+  bu_mul_ip(a_ptr,a_ptr);
 }
 
 // Read from a string of hex digits

@@ -4,17 +4,28 @@
 #include "bu.h"
 
 int main() {
-  bigunsigned a,b,c;
+  bigunsigned a,b,c,d;
   char s[BU_MAX_HEX+1];
 
   bu_readhex(&a,"CAB51AFF BEEF");
   bu_readhex(&b,"111111111111");
+  bu_readhex(&d,"100");
 
   bu_add(&c, &a, &b);
  
   bu_dbg_printf(&c);
   
+  bu_add_ip(&a,&b);
   
+  bu_dbg_printf(&a);
+
+  bu_mul_digit_ip(&a,16);
+  
+  bu_dbg_printf(&a);
+
+  //bu_mul_ip(&a,&d);
+
+  bu_dbg_printf(&a);
   //For testing shifts
   
   printf("\n \n Shift a right by 16\n");
