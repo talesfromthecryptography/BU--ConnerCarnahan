@@ -207,6 +207,7 @@ void bu_add_ip(bigunsigned *a_ptr, bigunsigned *b_ptr){
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)carry;
   }
   a_ptr->used = bound;
+
   if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
   }
@@ -230,13 +231,13 @@ uint16_t bu_len(bigunsigned *a_ptr) {
 //This should not be used if the result would be greater that 8k bits or it will give a weird answer
 void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
   bigunsigned carry; //carry will make sure I only have to add on the last step
-  bu_clear(&carry); //just to make sure there isn't any junk in this variable
-
+  bu_clear(&carry);  //just to make sure there isn't any junk in this variable
   uint64_t mult = 0; //This is a temporary variable that holds the digit multiplication
+ 
   for (uint16_t i = 0; i < b_ptr->used; i += 1){
     mult = (uint64_t)(b_ptr->digit[(uint8_t)(b_ptr->base+i)])*(uint64_t)(d);  //calculate the full multiplication of the two digits
-    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)mult;              //put the low digit in the array in the spot it needs to be
-    carry.digit[(uint8_t)(i+1)] = (uint32_t)(mult >> 32);                 //Hold the larger digit for later
+    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)mult;                  //put the low digit in the array in the spot it needs to be
+    carry.digit[(uint8_t)(i+1)] = (uint32_t)(mult >> 32);                     //Hold the larger digit for later
   }
 
   a_ptr->used = b_ptr->used;
@@ -246,7 +247,7 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = 0; //To clear the memory that shouldn't be non-zero out without clearing everything
   }
 
-  if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
+  while (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
   }
 
@@ -255,6 +256,7 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
   if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base-1)] == 0 && a_ptr->used > 0){
     a_ptr->used -= 1; //This fixed a weird bug (All bugs are weird)
   }
+  
 }
 
 // a *= d
@@ -265,22 +267,18 @@ void bu_mul_digit_ip(bigunsigned *a_ptr, uint32_t d){
 // a = b*c
 //There is unstable behavior for results greater than 8k bits
 void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){  
-  bigunsigned carries[b_ptr->used]; //Temp variable that keeps all of the digitwise multiplications
-  bigunsigned carry;
-
+  bigunsigned running; //Temporary running total
+  bu_clear(&running);
+  bigunsigned carry; //Temporary for one line multiplication
+  bu_clear(&carry);
+  
   for(uint16_t i = 0; i < b_ptr->used; i+= 1 ){
-    bu_clear(&carries[i]); //Idk I get scared
     bu_mul_digit(&carry,c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
-    bu_shl_ip(&carry,32*i);
-    bu_cpy(&carries[i],&carry);
+    bu_shl_ip(&carry,32*i);                                            //Shift the thing to the right place
+    bu_add_ip(&running,&carry);
   }
 
-  bu_clear(a_ptr); //make sure a is 0
-
-  for(uint16_t i = 0; i < b_ptr->used; i+=1 ){
-    bu_add_ip(a_ptr,&carries[i]); //add all of the carries into one bigunsigned
-  }
-
+  bu_cpy(a_ptr,&running);
 }
 
 // a *= b
