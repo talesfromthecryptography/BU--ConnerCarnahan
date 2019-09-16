@@ -272,7 +272,8 @@ void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){
   bu_clear(&running);
   bigunsigned carry; //Temporary for one line multiplication
   bu_clear(&carry);
-  
+  uint16_t t = 0;
+
   for(uint16_t i = 0; i < b_ptr->used; i+=1){
     bu_mul_digit(&carry,c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]);  //Calculate the multiplication of a digit to the other number
     bu_shl_ip(&carry,i << 5); //Shift the thing to the right place
