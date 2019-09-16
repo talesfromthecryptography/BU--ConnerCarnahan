@@ -15,11 +15,11 @@ void bu_cpy(bigunsigned *dest, bigunsigned *src) {
   // reset upper 0s in dest
   memset(dest->digit, 0, sizeof(uint32_t)*BU_DIGITS-cnt);
 
-  uint8_t i_dest = 0; // TODO: This is wrong. Fix it.
-  uint8_t i_src = src->base;
+  uint8_t i_dest = dest->used; // TODO: This is wrong. Fix it.
+  uint8_t i_src = src->used;
 
   while (cnt-- > 0) {
-    dest->digit[i_dest--] = src->digit[i_src--];
+    dest->digit[--i_dest] = src->digit[src->base+(--i_src)];
   }
 }
 
@@ -32,6 +32,9 @@ void bu_clear(bigunsigned *a_ptr) {
 
 //a = b<<cnt
 void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
+  if(cnt == 0){
+    return;
+  }
   uint16_t wrds = cnt >> 5; // # of whole words to shift
   uint16_t bits = cnt &0x1f;// number of bits in a word to shift
 
@@ -46,7 +49,7 @@ void bu_shl(bigunsigned* a_ptr, bigunsigned* b_ptr, uint16_t cnt) {
   a_ptr->base = b_ptr->base;
   a_ptr->used = b_ptr->used;
   for (uint16_t i = b_ptr->used; i < BU_DIGITS; i += 1){
-    a_ptr->digit[(a_ptr->base+i)%BU_DIGITS] = 0;
+    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = 0;
   }
 
   //I am doing a for loop because it will take care of both moving the base for the words and handle possible overflow
@@ -85,6 +88,9 @@ void bu_shl_ip(bigunsigned* a_ptr, uint16_t cnt) {
 
 //a = (b>>cnt)
 void bu_shr(bigunsigned* a_ptr,  bigunsigned* b_ptr, uint16_t cnt){
+  if(cnt == 0){
+    return;
+  }
   uint16_t wrds = cnt >> 5; // # of whole words to shift
   uint16_t bits = cnt &0x1f;// number of bits in a word to shift
 
@@ -190,8 +196,7 @@ void bu_add(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr) {
 }
 
 //a += b
-//This is probably not as fast as the regular add but the code is nicer so if this works I'll be happy
-//UPDATE: It works and I am pretty pleased it only loops once
+//This is probably not as fast as the regular add but the code is nicer
 //Should not be used if the result > 8k Bits
 void bu_add_ip(bigunsigned *a_ptr, bigunsigned *b_ptr){
   uint64_t carry = 0;
@@ -233,13 +238,23 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)mult;              //put the low digit in the array in the spot it needs to be
     carry.digit[(uint8_t)(i+1)] = (uint32_t)(mult >> 32);                 //Hold the larger digit for later
   }
+
   a_ptr->used = b_ptr->used;
   carry.used = a_ptr->used + 1;
+
+  for(int i = a_ptr->used; i < BU_DIGITS; i+=1){
+    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = 0; //To clear the memory that shouldn't be non-zero out without clearing everything
+  }
+
   if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
   }
+
   bu_add_ip(a_ptr,&carry); //finally add the carry to the non-carried data
 
+  if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base-1)] == 0 && a_ptr->used > 0){
+    a_ptr->used -= 1; //This fixed a weird bug (All bugs are weird)
+  }
 }
 
 // a *= d
@@ -251,20 +266,18 @@ void bu_mul_digit_ip(bigunsigned *a_ptr, uint32_t d){
 //There is unstable behavior for results greater than 8k bits
 void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){  
   bigunsigned carries[b_ptr->used]; //Temp variable that keeps all of the digitwise multiplications
+  bigunsigned carry;
 
-  for(uint16_t i = 0; i < b_ptr->used; i+=1 ){
-    bu_clear(&(carries[i])); //Idk I get scared
-    bu_mul_digit(&(carries[i]),c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
-    //bu_dbg_printf(&(carries[i]));
-  }
-  
-  for(uint16_t i = 1; i < b_ptr->used; i+=1 ){
-    bu_shl_ip(&carries[i], 0x100*i); //Make sure that things are all shifted to match their digit number
+  for(uint16_t i = 0; i < b_ptr->used; i+= 1 ){
+    bu_clear(&carries[i]); //Idk I get scared
+    bu_mul_digit(&carry,c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
+    bu_shl_ip(&carry,32*i);
+    bu_cpy(&carries[i],&carry);
   }
 
   bu_clear(a_ptr); //make sure a is 0
+
   for(uint16_t i = 0; i < b_ptr->used; i+=1 ){
-    printf("Carry %x \n", i);
     bu_add_ip(a_ptr,&carries[i]); //add all of the carries into one bigunsigned
   }
 
