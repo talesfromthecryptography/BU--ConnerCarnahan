@@ -202,6 +202,9 @@ void bu_add_ip(bigunsigned *a_ptr, bigunsigned *b_ptr){
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)carry;
   }
   a_ptr->used = bound;
+  if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
+    a_ptr->used += 1;
+  }
 
 }
 
@@ -224,14 +227,19 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
   bigunsigned carry; //carry will make sure I only have to add on the last step
   bu_clear(&carry); //just to make sure there isn't any junk in this variable
 
-  uint64_t mult = 0; //This is a temporary variable that holds 
+  uint64_t mult = 0; //This is a temporary variable that holds the digit multiplication
   for (uint16_t i = 0; i < b_ptr->used; i += 1){
-    mult = (uint64_t)b_ptr->digit[(uint8_t)(b_ptr->base+i)]*(uint64_t)d;  //calculate the full multiplication of the two digits
+    mult = (uint64_t)(b_ptr->digit[(uint8_t)(b_ptr->base+i)])*(uint64_t)(d);  //calculate the full multiplication of the two digits
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)mult;              //put the low digit in the array in the spot it needs to be
     carry.digit[(uint8_t)(i+1)] = (uint32_t)(mult >> 32);                 //Hold the larger digit for later
   }
-
+  a_ptr->used = b_ptr->used;
+  carry.used = a_ptr->used + 1;
+  if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
+    a_ptr->used += 1;
+  }
   bu_add_ip(a_ptr,&carry); //finally add the carry to the non-carried data
+
 }
 
 // a *= d
@@ -241,19 +249,22 @@ void bu_mul_digit_ip(bigunsigned *a_ptr, uint32_t d){
 
 // a = b*c
 //There is unstable behavior for results greater than 8k bits
-void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){
+void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){  
   bigunsigned carries[b_ptr->used]; //Temp variable that keeps all of the digitwise multiplications
 
-  for(uint16_t i = 0; i < b_ptr->used; i+=1){
-    bu_mul_digit(&carries[i],c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
+  for(uint16_t i = 0; i < b_ptr->used; i+=1 ){
+    bu_clear(&(carries[i])); //Idk I get scared
+    bu_mul_digit(&(carries[i]),c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
+    //bu_dbg_printf(&(carries[i]));
   }
   
-  for(uint16_t i = 1; i < b_ptr->used; i+=1){
-    bu_shl_ip(&carries[i], 32*i); //Make sure that things are all shifted to match their digit number
+  for(uint16_t i = 1; i < b_ptr->used; i+=1 ){
+    bu_shl_ip(&carries[i], 0x100*i); //Make sure that things are all shifted to match their digit number
   }
 
   bu_clear(a_ptr); //make sure a is 0
-  for(uint16_t i = 0; i < b_ptr->used; i+=1){
+  for(uint16_t i = 0; i < b_ptr->used; i+=1 ){
+    printf("Carry %x \n", i);
     bu_add_ip(a_ptr,&carries[i]); //add all of the carries into one bigunsigned
   }
 
@@ -287,7 +298,7 @@ void bu_readhex(bigunsigned *a_ptr, char *s) {
 
   //Reverse method:
   char *s_ptr = s;
-  int count = strlen(s_ptr);
+  int count = strlen(s_ptr)-1;
   unsigned pos = 0;
   
   while (count >= 0 && pos < BU_MAX_HEX) {
@@ -307,6 +318,6 @@ void bu_dbg_printf(bigunsigned *a_ptr) {
   uint16_t i = a_ptr->used;
   printf("Digits: ");
   while (i-- > 0)
-    printf("%8x ", a_ptr->digit[(a_ptr->base+i) % BU_DIGITS]);
+    printf("%8x ", a_ptr->digit[(uint8_t)(a_ptr->base+i)]);
   printf("Length: %x\n", bu_len(a_ptr));
 }

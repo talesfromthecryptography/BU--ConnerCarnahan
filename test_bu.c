@@ -5,61 +5,18 @@
 
 int main() {
   bigunsigned a,b,c,d;
-  char s[BU_MAX_HEX+1];
 
-  bu_readhex(&a,"CAB51AFF BEEF");
-  bu_readhex(&b,"111111111111");
-  bu_readhex(&d,"100");
+  bu_readhex(&a,"BEEFBEEF");
+  bu_readhex(&b,"10000001");
+  bu_readhex(&d,"1");
 
   bu_add(&c, &a, &b);
  
-  bu_dbg_printf(&c);
-  
-  bu_add_ip(&a,&b);
-  
-  bu_dbg_printf(&a);
+  //bu_dbg_printf(&c);
 
-  bu_mul_digit_ip(&a,16);
-  
-  bu_dbg_printf(&a);
-
-  //bu_mul_ip(&a,&d);
-
-  bu_dbg_printf(&a);
-  //For testing shifts
-  
-  printf("\n \n Shift a right by 16\n");
-  bu_shr_ip(&a,16);
-  bu_dbg_printf(&a);
-
-  bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a right by 36\n");
-  bu_shr_ip(&a,36);
-  bu_dbg_printf(&a);
-
-  //bu_shl(&b,&c,32);
-  //bu_dbg_printf(&b);
-
-  bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a left by 16\n");
-  bu_shl_ip(&a,16);
-  bu_dbg_printf(&a);
-
-  bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a left by 32\n");
-  bu_shl_ip(&a,32);
-  bu_dbg_printf(&a);
-  
-  bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a left by 56\n");
-  bu_shl_ip(&a,56);
-  bu_dbg_printf(&a);
-
-  bu_readhex(&a,"CAB51AFF BEEF");
-  printf("\n \n Shift a left by 64\n");
-  bu_shl_ip(&a,64);
-  bu_dbg_printf(&a); 
-
+  bu_mul(&d,&a,&b);
+  //bu_mul_digit(&d,&a,b.digit[1]);
+  bu_dbg_printf(&d);
 
   return 0;
 }
