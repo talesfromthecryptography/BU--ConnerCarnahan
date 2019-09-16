@@ -233,7 +233,11 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
   bigunsigned carry; //carry will make sure I only have to add on the last step
   bu_clear(&carry);  //just to make sure there isn't any junk in this variable
   uint64_t mult = 0; //This is a temporary variable that holds the digit multiplication
- 
+
+  for(uint16_t i = b_ptr->used; i < BU_DIGITS; i+=1){
+    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = 0; //To clear the memory that shouldn't be non-zero out without clearing everything
+  } 
+
   for (uint16_t i = 0; i < b_ptr->used; i += 1){
     mult = (uint64_t)(b_ptr->digit[(uint8_t)(b_ptr->base+i)])*(uint64_t)(d);  //calculate the full multiplication of the two digits
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)mult;                  //put the low digit in the array in the spot it needs to be
@@ -243,9 +247,6 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
   a_ptr->used = b_ptr->used;
   carry.used = a_ptr->used + 1;
 
-  for(int i = a_ptr->used; i < BU_DIGITS; i+=1){
-    a_ptr->digit[(uint8_t)(a_ptr->base+i)] = 0; //To clear the memory that shouldn't be non-zero out without clearing everything
-  }
 
   while (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
@@ -272,9 +273,12 @@ void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){
   bigunsigned carry; //Temporary for one line multiplication
   bu_clear(&carry);
   
-  for(uint16_t i = 0; i < b_ptr->used; i+= 1 ){
-    bu_mul_digit(&carry,c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]); //Calculate the multiplication of a digit to the other number
-    bu_shl_ip(&carry,32*i);                                            //Shift the thing to the right place
+  for(uint16_t i = 0; i < b_ptr->used; i+=1){
+    bu_mul_digit(&carry,c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]);  //Calculate the multiplication of a digit to the other number
+    bu_shl_ip(&carry,i << 5); //Shift the thing to the right place
+    printf("\n Digit num: %x \n", i);
+    printf("\n Digit val: %x \n", b_ptr->digit[(uint8_t)(b_ptr->base+i)]);
+    bu_dbg_printf(&carry);
     bu_add_ip(&running,&carry);
   }
 

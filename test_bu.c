@@ -7,7 +7,7 @@ int main() {
   bigunsigned a,b,c,d;
 
   bu_readhex(&a,"BEEFBEEFBEEFBEEFBEEF");
-  bu_readhex(&b,"10000000000000000001");
+  bu_readhex(&b,"100000000000000000001");
   bu_readhex(&d,"1");
 
   bu_add(&c, &a, &b);
