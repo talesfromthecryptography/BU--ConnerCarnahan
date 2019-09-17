@@ -272,18 +272,19 @@ void bu_mul(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr){
   bu_clear(&running);
   bigunsigned carry; //Temporary for one line multiplication
   bu_clear(&carry);
-  uint16_t t = 0;
-
+  uint32_t sh = 0;
+  
   for(uint16_t i = 0; i < b_ptr->used; i+=1){
     bu_mul_digit(&carry,c_ptr,b_ptr->digit[(uint8_t)(b_ptr->base+i)]);  //Calculate the multiplication of a digit to the other number
-    bu_shl_ip(&carry,i << 5); //Shift the thing to the right place
+    sh = ((uint32_t)i) << 5;
+    bu_shl_ip(&carry,sh); //Shift the thing to the right place
     printf("\n Digit num: %x \n", i);
     printf("\n Digit val: %x \n", b_ptr->digit[(uint8_t)(b_ptr->base+i)]);
     bu_dbg_printf(&carry);
-    bu_add_ip(&running,&carry);
+    bu_add_ip(&running,&carry); //Add this line to the running total
   }
 
-  bu_cpy(a_ptr,&running);
+  bu_cpy(a_ptr,&running); //copy the running total into the ptr we want it in
 }
 
 // a *= b
