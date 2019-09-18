@@ -1,3 +1,10 @@
+///////////////////////////
+// Conner Carnahan
+// Sept 17, 2019
+// Sources: I made this, Doc Mosh helped me fix some things
+///////////////////////////
+
+
 #include <string.h> // for memset, etc.
 #include <stdio.h>  // for printf
 #include <string.h>
@@ -15,7 +22,7 @@ void bu_cpy(bigunsigned *dest, bigunsigned *src) {
   // reset upper 0s in dest
   memset(dest->digit, 0, sizeof(uint32_t)*BU_DIGITS-cnt);
 
-  uint8_t i_dest = dest->used; // TODO: This is wrong. Fix it.
+  uint8_t i_dest = dest->used; // TODO: This is wrong. Fix it. // Not anymore
   uint8_t i_src = src->used;
 
   while (cnt-- > 0) {
@@ -200,14 +207,20 @@ void bu_add(bigunsigned *a_ptr, bigunsigned *b_ptr, bigunsigned *c_ptr) {
 //Should not be used if the result > 8k Bits
 void bu_add_ip(bigunsigned *a_ptr, bigunsigned *b_ptr){
   uint64_t carry = 0;
-  uint16_t bound = a_ptr->used >= b_ptr->used ? a_ptr->used : b_ptr->used; 
+  uint16_t bound = a_ptr->used >= b_ptr->used ? a_ptr->used : b_ptr->used; //We have to iterate through the larger one to carry all the way through
+  
+  //Make sure the last digit that we check is not already filled with garbage:
+  a_ptr->digit[a_ptr->base+bound] = 0;
 
   for (uint16_t i = 0; i < bound; i+=1){
+    //Add the two digits and whatever carry has in the slot
     carry = (uint64_t)(b_ptr->digit[(uint8_t)(i+b_ptr->base)]) + (uint64_t)(a_ptr->digit[(uint8_t)(i+a_ptr->base)]) + (carry >> 32);
+    //set the digit to the first 32 bits
     a_ptr->digit[(uint8_t)(a_ptr->base+i)] = (uint32_t)carry;
   }
-  a_ptr->used = bound;
+  a_ptr->used = bound; //We know that it will have at least this many digits since one of them had this many
 
+  //but it could have one more
   if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base)] != 0 && a_ptr->used < BU_DIGITS){
     a_ptr->used += 1;
   }
@@ -255,7 +268,7 @@ void bu_mul_digit(bigunsigned *a_ptr, bigunsigned *b_ptr, uint32_t d){
   bu_add_ip(a_ptr,&carry); //finally add the carry to the non-carried data
 
   if (a_ptr->digit[(uint8_t)(a_ptr->used+a_ptr->base-1)] == 0 && a_ptr->used > 0){
-    a_ptr->used -= 1; //This fixed a weird bug (All bugs are weird)
+    a_ptr->used -= 1; //This fixed a weird bug (All bugs are weird, its my coding style)
   }
   
 }
